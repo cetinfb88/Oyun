@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Neon Merge 2048 - Android & AdMob Sürümü</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+      color: #f8fafc;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .pulse-ad {
+      animation: pulseGlow 2s infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.55); }
+      50% { box-shadow: 0 0 18px 4px rgba(250, 204, 21, 0.85); }
+    }
+    canvas {
+      touch-action: none;
+      display: block;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen p-2 sm:p-4">
+
+  <!-- Top App Bar -->
+  <header class="w-full max-w-md flex items-center justify-between gap-1.5 mb-2 px-3 py-2 rounded-2xl glass-card shadow-lg">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center font-black text-slate-950 text-xs shadow">
+        2048
+      </div>
+      <div>
+        <h1 class="text-xs sm:text-sm font-extrabold tracking-tight leading-none text-white">NEON MERGE</h1>
+        <span class="text-[10px] text-emerald-400 font-semibold">Google Play Ready</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1">
+      <!-- Coins -->
+      <div class="flex items-center gap-1 bg-slate-900/90 border border-amber-500/30 px-2 py-1 rounded-xl">
+        <span class="text-xs">🪙</span>
+        <span id="coinDisplay" class="text-xs font-extrabold text-amber-400">150</span>
+      </div>
+      <!-- Quests & Daily Bonus Button (Retention Booster) -->
+      <button id="btnQuests" type="button" class="px-2 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-xs font-extrabold transition relative" title="Görevler ve Günlük Ödül">
+        🎯 Görev
+        <span id="questDot" class="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5"></span>
+      </button>
+      <!-- Share Button (Viral Loop) -->
+      <button id="btnShare" type="button" class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs transition" title="Arkadaşına Meydan Oku">
+        📤
+      </button>
+      <!-- Audio Toggle -->
+      <button id="btnMute" type="button" class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs transition" title="Ses Aç/Kapat">
+        🔊
+      </button>
+      <!-- Monetization & Android Guide Modal Toggle -->
+      <button id="btnMonetizeInfo" type="button" class="px-2 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-[11px] font-bold text-white shadow transition">
+        📊 APK
+      </button>
+    </div>
+  </header>
+
+  <!-- Score & Next Block Bar -->
+  <section class="w-full max-w-md grid grid-cols-3 gap-2 mb-2">
+    <div class="glass-card rounded-2xl px-3 py-2 flex flex-col justify-center">
+      <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">SKOR</span>
+      <div class="flex items-baseline gap-1">
+        <span id="scoreDisplay" class="text-lg sm:text-xl font-black text-white">0</span>
+        <span id="multiplierBadge" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-black">2X</span>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-2xl px-3 py-2 flex items-center justify-between">
+      <div>
+        <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">SIRADAKİ</span>
+        <span id="comboText" class="text-[11px] font-bold text-cyan-400">Sütuna Dokun!</span>
+      </div>
+      <div id="nextBlockPreview" class="w-11 h-11 rounded-xl flex items-center justify-center font-black text-base shadow-inner border border-white/20 bg-emerald-500 text-white">
+        2
+      </div>
+    </div>
+
+    <div class="glass-card rounded-2xl px-3 py-2 flex flex-col justify-center items-end">
+      <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">REKOR</span>
+      <span id="highScoreDisplay" class="text-lg sm:text-xl font-black text-amber-300">0</span>
+    </div>
+  </section>
+
+  <!-- Active Rewarded Boost Banner -->
+  <div id="boostBanner" class="w-full max-w-md mb-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-pink-500/20 border border-amber-400/40 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-base">🎬</span>
+      <div>
+        <p id="boostStatusText" class="text-xs font-bold text-amber-200 leading-tight">2 Kat Altın & Skor Kazan!</p>
+        <p class="text-[10px] text-slate-300">Kısa ödüllü video izle, 60 sn boyunca 2x kazan</p>
+      </div>
+    </div>
+    <button id="btnWatch2xAd" type="button" class="pulse-ad px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold text-xs whitespace-nowrap shadow hover:brightness-110 transition">
+      🎥 İzle (2X)
+    </button>
+  </div>
+
+  <!-- Game Board Container -->
+  <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center relative">
+    <div id="canvasWrapper" class="w-full aspect-[5/6] max-h-[58vh] glass-card rounded-2xl p-2 relative shadow-2xl overflow-hidden flex items-center justify-center">
+      <canvas id="gameCanvas" class="w-full h-full rounded-xl"></canvas>
+
+      <!-- Active Tool Mode Indicator Banner -->
+      <div id="toolModeBanner" class="hidden absolute top-3 left-1/2 -translate-x-1/2 bg-rose-600/95 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg border border-white/30 flex items-center gap-2 z-10">
+        <span id="toolModeText">Yok etmek istediğin bloğa dokun!</span>
+        <button id="btnCancelTool" type="button" class="bg-black/30 px-2 py-0.5 rounded-full text-[10px] hover:bg-black/50">İptal</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Power-ups & Rewarded Ad Controls -->
+  <footer class="w-full max-w-md mt-2 grid grid-cols-4 gap-2">
+    <!-- Hammer Power-up -->
+    <button id="btnHammer" type="button" class="glass-card hover:bg-slate-800/90 active:scale-95 transition rounded-2xl p-2 flex flex-col items-center justify-center border border-slate-700/80 relative">
+      <span class="text-lg">🔨</span>
+      <span class="text-[11px] font-bold text-white mt-0.5">Çekiç</span>
+      <span id="hammerBadge" class="text-[10px] font-extrabold text-amber-400">1 Adet</span>
+    </button>
+
+    <!-- Bomb Power-up -->
+    <button id="btnBomb" type="button" class="glass-card hover:bg-slate-800/90 active:scale-95 transition rounded-2xl p-2 flex flex-col items-center justify-center border border-slate-700/80 relative">
+      <span class="text-lg">💣</span>
+      <span class="text-[11px] font-bold text-white mt-0.5">Bomba (3x3)</span>
+      <span id="bombBadge" class="text-[10px] font-extrabold text-amber-400">1 Adet</span>
+    </button>
+
+    <!-- Upgrade / Reroll Next Block -->
+    <button id="btnUpgradeNext" type="button" class="glass-card hover:bg-slate-800/90 active:scale-95 transition rounded-2xl p-2 flex flex-col items-center justify-center border border-slate-700/80">
+      <span class="text-lg">⚡</span>
+      <span class="text-[11px] font-bold text-white mt-0.5">Bloğu Katla</span>
+      <span id="upgradeBadge" class="text-[10px] font-extrabold text-emerald-400">🎥 Ücretsiz</span>
+    </button>
+
+    <!-- Free Chest / +120 Coins via Ad -->
+    <button id="btnFreeCoinsAd" type="button" class="glass-card hover:bg-slate-800/90 active:scale-95 transition rounded-2xl p-2 flex flex-col items-center justify-center border border-amber-500/40 bg-amber-500/10">
+      <span class="text-lg">🎁</span>
+      <span class="text-[11px] font-bold text-amber-300 mt-0.5">+120 Altın</span>
+      <span class="text-[10px] font-extrabold text-amber-400">🎥 Video İzle</span>
+    </button>
+  </footer>
+
+  <!-- QUESTS & DAILY REWARD MODAL (RETENTION ENGINE) -->
+  <div id="questsModal" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-700 p-5 text-left shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-base font-black text-white">🎯 Günlük Bonus & Görevler</h2>
+          <p class="text-[11px] text-slate-400">Oyuncuyu oyunda tutan ve reklam izleten görev sistemi</p>
+        </div>
+        <button id="btnCloseQuests" type="button" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-bold text-sm hover:bg-slate-700">✕</button>
+      </div>
+
+      <!-- Daily Bonus Box -->
+      <div class="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/40 mb-3 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-extrabold uppercase text-amber-300 block">GÜNLÜK GİRİŞ HEDİYESİ</span>
+          <span class="text-sm font-black text-white">+100 Altın (Videoyla +250 🪙)</span>
+        </div>
+        <button id="btnClaimDaily" type="button" class="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow transition">
+          🎥 2.5X Al (250🪙)
+        </button>
+      </div>
+
+      <!-- Mission List -->
+      <div class="space-y-2 text-xs">
+        <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="font-bold text-white">🔥 256 veya Üzeri Blok Yap</p>
+            <p id="quest256Status" class="text-[11px] text-slate-400">Ödül: +150 Altın</p>
+          </div>
+          <button id="btnClaimQuest256" type="button" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs">
+            Devam Ediyor
+          </button>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="font-bold text-white">⚡ 2.000 Skora Ulaş</p>
+            <p id="questScoreStatus" class="text-[11px] text-slate-400">Ödül: +200 Altın</p>
+          </div>
+          <button id="btnClaimQuestScore" type="button" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs">
+            Devam Ediyor
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIMULATED REWARDED VIDEO AD MODAL -->
+  <div id="adModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700 overflow-hidden shadow-2xl flex flex-col">
+      <div class="bg-slate-950 px-4 py-2.5 flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px]">REKLAM</span>
+          <span id="adRewardLabel" class="text-xs text-slate-300 font-semibold">Ödül: +120 Altın</span>
+        </div>
+        <div id="adTimerBadge" class="px-2.5 py-1 rounded-full bg-slate-800 text-amber-400 font-bold text-xs">
+          5 sn kaldı
+        </div>
+      </div>
+
+      <div class="p-6 flex flex-col items-center text-center bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-950 relative">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-400 to-indigo-600 flex items-center justify-center text-3xl shadow-lg mb-3 animate-bounce">
+          🚀
+        </div>
+        <h3 class="text-base font-black text-white mb-1">Google AdMob Ödüllü Video</h3>
+        <p class="text-xs text-slate-300 mb-4 max-w-xs">
+          Android paketinde (@capacitor-community/admob) gerçek Google AdMob reklamı tam ekran açılır; tarayıcıda 5 saniyelik test simülasyonu çalışır.
+        </p>
+
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden mb-4">
+          <div id="adProgressBar" class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-300" style="width: 0%;"></div>
+        </div>
+
+        <div class="w-full rounded-xl bg-slate-950/80 border border-slate-800 p-2.5 text-left text-[11px] text-slate-400">
+          <div class="flex justify-between">
+            <span>Tahmini eCPM (Ödüllü Video):</span>
+            <span class="text-emerald-400 font-bold">$8.00 – $25.00</span>
+          </div>
+          <div class="flex justify-between mt-1">
+            <span>Bu Oturumdaki Reklam İzlemesi:</span>
+            <span id="adModalCount" class="text-amber-300 font-bold">1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-950 flex justify-end gap-2">
+        <button id="btnCancelAdEarly" type="button" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-700">
+          Ödülü Kaybet & Kapat
+        </button>
+        <button id="btnClaimAdReward" type="button" disabled class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs opacity-40 cursor-not-allowed transition">
+          🎁 Ödülü Al ve Dön
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER / REVIVE REWARDED MODAL -->
+  <div id="gameOverModal" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-sm rounded-3xl glass-card p-6 text-center border border-slate-600 shadow-2xl">
+      <div class="text-4xl mb-2">⚡</div>
+      <h2 class="text-xl font-black text-white mb-1">Tahta Doldu!</h2>
+      <p class="text-xs text-slate-300 mb-4">Skorun: <strong id="finalScoreText" class="text-amber-400">0</strong></p>
+
+      <div id="reviveOfferBox" class="rounded-2xl bg-gradient-to-br from-amber-500/20 to-rose-500/20 border border-amber-400/50 p-4 mb-4">
+        <p class="text-xs font-extrabold text-amber-300 mb-1">🔥 İKİNCİ ŞANS (En Yüksek Reklam Geliri Noktası)</p>
+        <p class="text-[11px] text-slate-200 mb-3">Ödüllü video izleyerek üstteki 3 satırı patlat ve rekoruna kaldığın yerden devam et!</p>
+        <button id="btnReviveAd" type="button" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs shadow-lg hover:brightness-110 transition">
+          🎥 Video İzle ve Devam Et (+Üst 3 Satırı Sil)
+        </button>
+      </div>
+
+      <button id="btnRestartGame" type="button" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition">
+        🔄 Yeni Oyun Başlat
+      </button>
+    </div>
+  </div>
+
+  <!-- MONETIZATION & ANDROID EXPORT GUIDE MODAL -->
+  <div id="monetizeModal" class="hidden fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-700 p-5 text-left shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-black text-white">📊 Gelir & Android Yayınlama Rehberi</h2>
+        <button id="btnCloseMonetize" type="button" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-bold text-sm hover:bg-slate-700">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+          <span class="text-[10px] text-slate-400 font-bold block">İZLENEN ÖDÜLLÜ VİDEO</span>
+          <span id="statAdsWatched" class="text-lg font-black text-emerald-400">0</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-slate-950 border border-slate-800">
+          <span class="text-[10px] text-slate-400 font-bold block">10.000 OYUNCUDA TAHMİNİ GÜNLÜK GELİR</span>
+          <span id="statProjectedRev" class="text-lg font-black text-amber-400">$180 - $420</span>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE REVENUE CALCULATOR -->
+      <div class="p-3.5 rounded-2xl bg-slate-950 border border-amber-500/40 mb-3">
+        <h3 class="text-xs font-extrabold text-amber-300 mb-2">💰 Canlı Kazanç Hesaplayıcı (İndirme & Video İzleme)</h3>
+        <label class="block text-[11px] text-slate-300 mb-1">
+          Toplam İndirme Sayısı: <strong id="calcDownloadVal" class="text-white">10.000</strong>
+        </label>
+        <input id="calcDownloadSlider" type="range" min="1000" max="100000" step="1000" value="10000" class="w-full accent-amber-400 mb-2" />
+        <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+          <div>
+            <span class="text-slate-400 block">Günlük Video İzleme:</span>
+            <strong id="calcDailyViews" class="text-cyan-300 text-xs">~4.500 izleme/gün</strong>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Tahmini Aylık Gelir:</span>
+            <strong id="calcMonthlyRev" class="text-emerald-400 text-xs">$1.350 (~46.000 ₺)</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECURITY KEYS & PASSWORDS CARD -->
+      <div class="space-y-2.5 text-xs text-slate-300">
+        <div class="p-3 rounded-2xl bg-indigo-950/60 border border-indigo-500/40">
+          <h3 class="font-extrabold text-indigo-300 mb-1">🔑 Oyun Güvenlik Şifrelerin (Keystore & Sertifika)</h3>
+          <ul class="space-y-1 text-[11px] font-mono text-slate-200">
+            <li><span class="text-slate-400">Paket Adı (App ID):</span> com.neonmerge2048.puzzle</li>
+            <li><span class="text-slate-400">AdMob Uygulama ID:</span> <strong class="text-emerald-400">ca-app-pub-1200616793027699~2971615326</strong></li>
+            <li><span class="text-slate-400">AdMob Ödüllü Video ID:</span> <strong class="text-emerald-400">ca-app-pub-1200616793027699/4174684651</strong></li>
+            <li><span class="text-slate-400">Keystore Dosyası:</span> neon-merge-release.jks</li>
+            <li><span class="text-slate-400">Keystore Şifresi:</span> <strong class="text-amber-300">NeonMerge2026!</strong></li>
+            <li><span class="text-slate-400">Key Alias (Anahtar Adı):</span> <strong class="text-amber-300">neonmerge2048</strong></li>
+            <li><span class="text-slate-400">Key Şifresi:</span> <strong class="text-amber-300">NeonMerge2026!</strong></li>
+            <li class="break-all"><span class="text-slate-400">SHA-1:</span> 2A:95:4E:CF:35:F9:34:88:57:8E:00:E1:18:D2:8F:F5:7A:8B:06:0C</li>
+          </ul>
+        </div>
+      </div>
+
+      <button id="btnResetStats" type="button" class="mt-4 w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition">
+        Oyuna Dön
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Message -->
+  <div id="toastBox" class="pointer-events-none fixed bottom-20 left-1/2 -translate-x-1/2 z-50 opacity-0 transition-opacity duration-300 bg-slate-900/95 border border-amber-400/50 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xl">
+    Ödül Kazanıldı!
+  </div>
+
+  <script>
+    (function () {
+      // ============================================================================
+      // GOOGLE ADMOB CONFIGURATION (ANDROID PRODUCTION + TEST ID)
+      // Google Play'de yayınlamadan önce kendi AdMob Rewarded Ad Unit ID'nizi yazın:
+      // ============================================================================
+      const ADMOB_CONFIG = {
+        androidRewardedAdUnitId: 'ca-app-pub-1200616793027699/4174684651', // Resmi Google AdMob Test ID (Kendi ID'nizle değiştirin)
+        isTesting: false
+      };
+
+      // Initialize Native AdMob if running inside Capacitor Android App
+      async function initNativeAdMobIfAvailable() {
+        try {
+          if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+            await window.Capacitor.Plugins.AdMob.initialize({
+              initializeForTesting: ADMOB_CONFIG.isTesting
+            });
+          }
+        } catch (err) {
+          // Fallback to web simulation silently
+        }
+      }
+
+      // --- GRID & GAME CONSTANTS ---
+      const COLS = 5;
+      const ROWS = 6;
+      const SPAWN_VALUES = [2, 4, 8, 16, 32, 64];
+
+      const BLOCK_COLORS = {
+        2:    { bg: '#10b981', border: '#34d399', text: '#ffffff' },
+        4:    { bg: '#06b6d4', border: '#22d3ee', text: '#ffffff' },
+        8:    { bg: '#3b82f6', border: '#60a5fa', text: '#ffffff' },
+        16:   { bg: '#8b5cf6', border: '#a78bfa', text: '#ffffff' },
+        32:   { bg: '#ec4899', border: '#f472b6', text: '#ffffff' },
+        64:   { bg: '#f43f5e', border: '#fb7185', text: '#ffffff' },
+        128:  { bg: '#f59e0b', border: '#fbbf24', text: '#0f172a' },
+        256:  { bg: '#eab308', border: '#fde047', text: '#0f172a' },
+        512:  { bg: '#84cc16', border: '#a3e635', text: '#0f172a' },
+        1024: { bg: '#14b8a6', border: '#2dd4bf', text: '#ffffff' },
+        2048: { bg: '#f97316', border: '#fdba74', text: '#ffffff' },
+        4096: { bg: '#e11d48', border: '#fda4af', text: '#ffffff' }
+      };
+
+      // --- STATE ---
+      let grid = [];
+      let score = 0;
+      let highScore = 0;
+      let maxTileReached = 2;
+      let coins = 150;
+      let nextValue = 2;
+      let hoverCol = 2;
+      let isAnimating = false;
+      let isGameOver = false;
+      let revivedThisGame = false;
+      let activeTool = null;
+      let hammerCount = 1;
+      let bombCount = 1;
+      let adsWatched = 0;
+      let multiplier2xRemaining = 0;
+      let multiplierInterval = null;
+      let dailyClaimed = false;
+      let quest256Claimed = false;
+      let questScoreClaimed = false;
+
+      // Visual animations
+      let particles = [];
+      let floatingTexts = [];
+      let fallingBlock = null;
+      let popCells = [];
+
+      // Audio state
+      let audioCtx = null;
+      let isMuted = false;
+
+      // Ad modal state
+      let pendingAdCallback = null;
+      let adCountdownTimer = null;
+
+      // DOM Elements
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const highScoreDisplay = document.getElementById('highScoreDisplay');
+      const coinDisplay = document.getElementById('coinDisplay');
+      const nextBlockPreview = document.getElementById('nextBlockPreview');
+      const comboText = document.getElementById('comboText');
+      const multiplierBadge = document.getElementById('multiplierBadge');
+      const boostStatusText = document.getElementById('boostStatusText');
+      const btnWatch2xAd = document.getElementById('btnWatch2xAd');
+      const toolModeBanner = document.getElementById('toolModeBanner');
+      const toolModeText = document.getElementById('toolModeText');
+      const btnCancelTool = document.getElementById('btnCancelTool');
+      const hammerBadge = document.getElementById('hammerBadge');
+      const bombBadge = document.getElementById('bombBadge');
+      const adModal = document.getElementById('adModal');
+      const adRewardLabel = document.getElementById('adRewardLabel');
+      const adTimerBadge = document.getElementById('adTimerBadge');
+      const adProgressBar = document.getElementById('adProgressBar');
+      const adModalCount = document.getElementById('adModalCount');
+      const btnCancelAdEarly = document.getElementById('btnCancelAdEarly');
+      const btnClaimAdReward = document.getElementById('btnClaimAdReward');
+      const gameOverModal = document.getElementById('gameOverModal');
+      const finalScoreText = document.getElementById('finalScoreText');
+      const reviveOfferBox = document.getElementById('reviveOfferBox');
+      const btnReviveAd = document.getElementById('btnReviveAd');
+      const btnRestartGame = document.getElementById('btnRestartGame');
+      const monetizeModal = document.getElementById('monetizeModal');
+      const questsModal = document.getElementById('questsModal');
+      const statAdsWatched = document.getElementById('statAdsWatched');
+      const toastBox = document.getElementById('toastBox');
+      const btnClaimDaily = document.getElementById('btnClaimDaily');
+      const btnClaimQuest256 = document.getElementById('btnClaimQuest256');
+      const btnClaimQuestScore = document.getElementById('btnClaimQuestScore');
+      const questDot = document.getElementById('questDot');
+
+      // --- SAFE STORAGE ---
+      function loadSavedState() {
+        try {
+          const savedHigh = localStorage.getItem('neon2048_high');
+          const savedCoins = localStorage.getItem('neon2048_coins');
+          if (savedHigh) highScore = parseInt(savedHigh, 10) || 0;
+          if (savedCoins) coins = parseInt(savedCoins, 10) || 150;
+        } catch (e) {}
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem('neon2048_high', String(highScore));
+          localStorage.setItem('neon2048_coins', String(coins));
+        } catch (e) {}
+      }
+
+      // --- WEB AUDIO SYNTHESIZER ---
+      function ensureAudio() {
+        if (isMuted) return;
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }
+
+      function playSound(type, pitchStep = 0) {
+        if (isMuted) return;
+        try {
+          ensureAudio();
+          if (!audioCtx) return;
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          if (type === 'drop') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(120, now + 0.09);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.start(now);
+            osc.stop(now + 0.09);
+          } else if (type === 'merge') {
+            osc.type = 'triangle';
+            const baseFreq = 300 + Math.min(pitchStep * 55, 600);
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.45, now + 0.16);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            osc.start(now);
+            osc.stop(now + 0.16);
+          } else if (type === 'boom') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(160, now);
+            osc.frequency.exponentialRampToValueAtTime(42, now + 0.25);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
+          } else if (type === 'reward') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.08);
+            osc.frequency.setValueAtTime(783.99, now + 0.16);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            osc.start(now);
+            osc.stop(now + 0.32);
+          }
+        } catch (e) {}
+      }
+
+      // --- UI UPDATES ---
+      function showToast(msg) {
+        toastBox.textContent = msg;
+        toastBox.style.opacity = '1';
+        setTimeout(() => {
+          toastBox.style.opacity = '0';
+        }, 2300);
+      }
+
+      function getBlockStyle(val) {
+        return BLOCK_COLORS[val] || { bg: '#a855f7', border: '#d8b4fe', text: '#ffffff' };
+      }
+
+      function updateQuestsUI() {
+        let anyReady = !dailyClaimed;
+        if (dailyClaimed) {
+          btnClaimDaily.textContent = '✅ Alındı';
+          btnClaimDaily.disabled = true;
+          btnClaimDaily.className = 'px-3 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs';
+        }
+        if (quest256Claimed) {
+          btnClaimQuest256.textContent = '✅ Alındı';
+          btnClaimQuest256.className = 'px-3 py-1.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs';
+        } else if (maxTileReached >= 256) {
+          anyReady = true;
+          btnClaimQuest256.textContent = '🎁 +150🪙 Al';
+          btnClaimQuest256.className = 'px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs';
+        }
+        if (questScoreClaimed) {
+          btnClaimQuestScore.textContent = '✅ Alındı';
+          btnClaimQuestScore.className = 'px-3 py-1.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs';
+        } else if (score >= 2000) {
+          anyReady = true;
+          btnClaimQuestScore.textContent = '🎁 +200🪙 Al';
+          btnClaimQuestScore.className = 'px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs';
+        }
+        questDot.style.display = anyReady ? 'block' : 'none';
+      }
+
+      function updateUI() {
+        scoreDisplay.textContent = score.toLocaleString('tr-TR');
+        highScoreDisplay.textContent = highScore.toLocaleString('tr-TR');
+        coinDisplay.textContent = coins.toLocaleString('tr-TR');
+
+        const st = getBlockStyle(nextValue);
+        nextBlockPreview.textContent = nextValue;
+        nextBlockPreview.style.backgroundColor = st.bg;
+        nextBlockPreview.style.borderColor = st.border;
+        nextBlockPreview.style.color = st.text;
+
+        hammerBadge.textContent = hammerCount > 0 ? `${hammerCount} Adet` : '🎥 Video / 80🪙';
+        bombBadge.textContent = bombCount > 0 ? `${bombCount} Adet` : '🎥 Video / 100🪙';
+        statAdsWatched.textContent = String(adsWatched);
+
+        if (multiplier2xRemaining > 0) {
+          multiplierBadge.classList.remove('hidden');
+          boostStatusText.textContent = `🔥 2X Aktif! (${multiplier2xRemaining} sn kaldı)`;
+          btnWatch2xAd.textContent = '🎥 +60 sn Ekle';
+        } else {
+          multiplierBadge.classList.add('hidden');
+          boostStatusText.textContent = '2 Kat Altın & Skor Kazan!';
+          btnWatch2xAd.textContent = '🎥 İzle (2X)';
+        }
+        updateQuestsUI();
+      }
+
+      function pickNextValue() {
+        const idx = Math.floor(Math.random() * SPAWN_VALUES.length);
+        return SPAWN_VALUES[idx];
+      }
+
+      // --- INITIALIZE / RESET GAME ---
+      function initGame() {
+        grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        score = 0;
+        isGameOver = false;
+        isAnimating = false;
+        revivedThisGame = false;
+        activeTool = null;
+        toolModeBanner.classList.add('hidden');
+        gameOverModal.classList.add('hidden');
+        nextValue = pickNextValue();
+        updateUI();
+      }
+
+      // --- CANVAS SIZING & RENDERING ---
+      function resizeCanvas() {
+        const wrapper = document.getElementById('canvasWrapper');
+        const rect = wrapper.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(260, Math.floor((rect.width - 16) * dpr));
+        canvas.height = Math.max(312, Math.floor((rect.height - 16) * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function drawRoundedRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function render() {
+        const dpr = window.devicePixelRatio || 1;
+        const width = canvas.width / dpr;
+        const height = canvas.height / dpr;
+
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = 6;
+        const cellW = (width - pad * (COLS + 1)) / COLS;
+        const cellH = (height - pad * (ROWS + 1)) / ROWS;
+
+        if (!isGameOver && activeTool === null && hoverCol >= 0 && hoverCol < COLS) {
+          const hx = pad + hoverCol * (cellW + pad);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+          drawRoundedRect(hx, pad, cellW, height - pad * 2, 12);
+          ctx.fill();
+
+          let previewRow = getDropRow(hoverCol);
+          if (previewRow !== -1 && !isAnimating) {
+            const gy = pad + previewRow * (cellH + pad);
+            const st = getBlockStyle(nextValue);
+            ctx.save();
+            ctx.globalAlpha = 0.28;
+            ctx.fillStyle = st.bg;
+            drawRoundedRect(hx + 2, gy + 2, cellW - 4, cellH - 4, 10);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const x = pad + c * (cellW + pad);
+            const y = pad + r * (cellH + pad);
+
+            ctx.fillStyle = r === 0 ? 'rgba(244, 63, 94, 0.08)' : 'rgba(15, 23, 42, 0.65)';
+            drawRoundedRect(x, y, cellW, cellH, 10);
+            ctx.fill();
+
+            if (r === 0) {
+              ctx.strokeStyle = 'rgba(244, 63, 94, 0.25)';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            }
+
+            const val = grid[r][c];
+            if (val > 0) {
+              drawBlock(x, y, cellW, cellH, val, r, c);
+            }
+          }
+        }
+
+        if (fallingBlock) {
+          const x = pad + fallingBlock.col * (cellW + pad);
+          drawBlock(x, fallingBlock.y, cellW, cellH, fallingBlock.value, -1, -1);
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 0.03;
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+          const ft = floatingTexts[i];
+          ft.y -= 1.1;
+          ft.alpha -= 0.022;
+          if (ft.alpha <= 0) {
+            floatingTexts.splice(i, 1);
+            continue;
+          }
+          ctx.save();
+          ctx.globalAlpha = ft.alpha;
+          ctx.font = '900 14px Inter, sans-serif';
+          ctx.fillStyle = ft.color;
+          ctx.textAlign = 'center';
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.restore();
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      function drawBlock(x, y, w, h, val, r, c) {
+        const st = getBlockStyle(val);
+        let scale = 1;
+        for (let i = popCells.length - 1; i >= 0; i--) {
+          if (popCells[i].r === r && popCells[i].c === c) {
+            scale = popCells[i].scale;
+            popCells[i].scale += (1 - popCells[i].scale) * 0.22;
+            if (Math.abs(1 - popCells[i].scale) < 0.02) {
+              popCells.splice(i, 1);
+            }
+          }
+        }
+
+        ctx.save();
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        ctx.translate(-cx, -cy);
+
+        ctx.fillStyle = st.bg;
+        drawRoundedRect(x + 1.5, y + 1.5, w - 3, h - 3, 10);
+        ctx.fill();
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = st.border;
+        ctx.stroke();
+
+        ctx.fillStyle = st.text;
+        const fontSize = val >= 1024 ? Math.floor(w * 0.3) : Math.floor(w * 0.38);
+        ctx.font = `900 ${fontSize}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(val), cx, cy + 1);
+        ctx.restore();
+      }
+
+      function spawnParticles(r, c, color) {
+        const dpr = window.devicePixelRatio || 1;
+        const width = canvas.width / dpr;
+        const height = canvas.height / dpr;
+        const pad = 6;
+        const cellW = (width - pad * (COLS + 1)) / COLS;
+        const cellH = (height - pad * (ROWS + 1)) / ROWS;
+        const cx = pad + c * (cellW + pad) + cellW / 2;
+        const cy = pad + r * (cellH + pad) + cellH / 2;
+
+        for (let i = 0; i < 14; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1.5 + Math.random() * 3.5;
+          particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 3 + Math.random() * 3,
+            color: color,
+            alpha: 1
+          });
+        }
+      }
+
+      function spawnFloatingText(r, c, text, color = '#fbbf24') {
+        const dpr = window.devicePixelRatio || 1;
+        const width = canvas.width / dpr;
+        const height = canvas.height / dpr;
+        const pad = 6;
+        const cellW = (width - pad * (COLS + 1)) / COLS;
+        const cellH = (height - pad * (ROWS + 1)) / ROWS;
+        const cx = pad + c * (cellW + pad) + cellW / 2;
+        const cy = pad + r * (cellH + pad) + cellH / 3;
+        floatingTexts.push({ x: cx, y: cy, text, color, alpha: 1 });
+      }
+
+      // --- GAME LOGIC: DROP & CHAIN MERGE ---
+      function getDropRow(col) {
+        for (let r = ROWS - 1; r >= 0; r--) {
+          if (grid[r][col] === 0) return r;
+        }
+        if (grid[0][col] === nextValue) return 0;
+        return -1;
+      }
+
+      function dropInColumn(col) {
+        if (isAnimating || isGameOver) return;
+        const targetRow = getDropRow(col);
+        if (targetRow === -1) {
+          showToast('Bu sütun dolu! Başka sütun seç veya Çekiç/Bomba kullan.');
+          return;
+        }
+
+        isAnimating = true;
+        playSound('drop');
+
+        const dpr = window.devicePixelRatio || 1;
+        const height = canvas.height / dpr;
+        const pad = 6;
+        const cellH = (height - pad * (ROWS + 1)) / ROWS;
+        const targetY = pad + targetRow * (cellH + pad);
+
+        const droppedVal = nextValue;
+        nextValue = pickNextValue();
+        updateUI();
+
+        fallingBlock = {
+          col,
+          row: targetRow,
+          y: pad,
+          targetY,
+          value: droppedVal
+        };
+
+        function stepFall() {
+          if (!fallingBlock) return;
+          fallingBlock.y += Math.max(14, (fallingBlock.targetY - fallingBlock.y) * 0.38);
+          if (fallingBlock.y >= fallingBlock.targetY - 2) {
+            const r = fallingBlock.row;
+            const c = fallingBlock.col;
+            const val = fallingBlock.value;
+            fallingBlock = null;
+
+            if (grid[r][c] === val) {
+              grid[r][c] = val * 2;
+              popCells.push({ r, c, scale: 1.35 });
+              awardMerge(r, c, val * 2, 1);
+            } else {
+              grid[r][c] = val;
+              popCells.push({ r, c, scale: 1.18 });
+            }
+            resolveBoardChain(r, c, 1);
+          } else {
+            requestAnimationFrame(stepFall);
+          }
+        }
+        requestAnimationFrame(stepFall);
+      }
+
+      function awardMerge(r, c, mergedVal, comboStep) {
+        if (mergedVal > maxTileReached) {
+          maxTileReached = mergedVal;
+        }
+        const mult = multiplier2xRemaining > 0 ? 2 : 1;
+        const gainedScore = mergedVal * comboStep * mult;
+        const gainedCoins = Math.max(2, Math.floor(Math.log2(mergedVal))) * mult;
+
+        score += gainedScore;
+        coins += gainedCoins;
+        if (score > highScore) {
+          highScore = score;
+        }
+        saveState();
+        updateUI();
+
+        const st = getBlockStyle(mergedVal);
+        spawnParticles(r, c, st.border);
+        spawnFloatingText(r, c, `+${gainedScore} (${gainedCoins}🪙)`, comboStep > 1 ? '#38bdf8' : '#fbbf24');
+        playSound('merge', comboStep);
+
+        if (comboStep > 1) {
+          comboText.textContent = `${comboStep}x KOMBO! 🔥`;
+        } else {
+          comboText.textContent = `Harika Birleşme!`;
+        }
+      }
+
+      function applyGravity() {
+        let moved = false;
+        for (let c = 0; c < COLS; c++) {
+          let writeRow = ROWS - 1;
+          for (let r = ROWS - 1; r >= 0; r--) {
+            if (grid[r][c] !== 0) {
+              if (r !== writeRow) {
+                grid[writeRow][c] = grid[r][c];
+                grid[r][c] = 0;
+                moved = true;
+              }
+              writeRow--;
+            }
+          }
+        }
+        return moved;
+      }
+
+      function resolveBoardChain(focusR, focusC, comboStep) {
+        setTimeout(() => {
+          let mergedAny = false;
+          const candidates = [];
+          if (focusR !== null && focusC !== null && grid[focusR] && grid[focusR][focusC] > 0) {
+            candidates.push([focusR, focusC]);
+          }
+          for (let r = ROWS - 1; r >= 0; r--) {
+            for (let c = 0; c < COLS; c++) {
+              if (grid[r][c] > 0 && !(r === focusR && c === focusC)) {
+                candidates.push([r, c]);
+              }
+            }
+          }
+
+          let nextFocusR = null;
+          let nextFocusC = null;
+
+          for (const [r, c] of candidates) {
+            const val = grid[r][c];
+            if (!val) continue;
+
+            const neighbors = [];
+            if (r + 1 < ROWS && grid[r + 1][c] === val) neighbors.push([r + 1, c]);
+            if (c - 1 >= 0 && grid[r][c - 1] === val) neighbors.push([r, c - 1]);
+            if (c + 1 < COLS && grid[r][c + 1] === val) neighbors.push([r, c + 1]);
+            if (r - 1 >= 0 && grid[r - 1][c] === val) neighbors.push([r - 1, c]);
+
+            if (neighbors.length > 0) {
+              let targetR = r;
+              let targetC = c;
+              for (const [nr, nc] of neighbors) {
+                if (nr > targetR) {
+                  targetR = nr;
+                  targetC = nc;
+                }
+              }
+
+              grid[r][c] = 0;
+              for (const [nr, nc] of neighbors) {
+                grid[nr][nc] = 0;
+              }
+
+              const multiplierFactor = Math.pow(2, neighbors.length);
+              const newVal = val * multiplierFactor;
+              grid[targetR][targetC] = newVal;
+              popCells.push({ r: targetR, c: targetC, scale: 1.38 });
+
+              awardMerge(targetR, targetC, newVal, comboStep);
+              applyGravity();
+
+              mergedAny = true;
+              nextFocusR = targetR;
+              nextFocusC = targetC;
+              break;
+            }
+          }
+
+          if (mergedAny) {
+            resolveBoardChain(nextFocusR, nextFocusC, comboStep + 1);
+          } else {
+            applyGravity();
+            isAnimating = false;
+            checkGameOverState();
+          }
+        }, 150);
+      }
+
+      function checkGameOverState() {
+        let anyMovePossible = false;
+        for (let c = 0; c < COLS; c++) {
+          if (getDropRow(c) !== -1) {
+            anyMovePossible = true;
+            break;
+          }
+        }
+        if (!anyMovePossible) {
+          isGameOver = true;
+          finalScoreText.textContent = score.toLocaleString('tr-TR');
+          reviveOfferBox.style.display = revivedThisGame ? 'none' : 'block';
+          gameOverModal.classList.remove('hidden');
+        }
+      }
+
+      // --- POWER-UPS (HAMMER & BOMB) ---
+      function handleToolClick(r, c) {
+        if (activeTool === 'hammer') {
+          if (grid[r][c] === 0) {
+            showToast('Kırmak için dolu bir bloğa dokun!');
+            return;
+          }
+          playSound('boom');
+          spawnParticles(r, c, '#f43f5e');
+          grid[r][c] = 0;
+          applyGravity();
+          hammerCount = Math.max(0, hammerCount - 1);
+          activeTool = null;
+          toolModeBanner.classList.add('hidden');
+          updateUI();
+          resolveBoardChain(null, null, 1);
+        } else if (activeTool === 'bomb') {
+          playSound('boom');
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = r + dr;
+              const nc = c + dc;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc] > 0) {
+                spawnParticles(nr, nc, '#fb923c');
+                grid[nr][nc] = 0;
+              }
+            }
+          }
+          applyGravity();
+          bombCount = Math.max(0, bombCount - 1);
+          activeTool = null;
+          toolModeBanner.classList.add('hidden');
+          updateUI();
+          resolveBoardChain(null, null, 1);
+        }
+      }
+
+      // --- REWARDED VIDEO AD SYSTEM (REAL ADMOB ON ANDROID + SIMULATOR ON WEB) ---
+      async function triggerRewardedAd(rewardTitle, onRewardGranted) {
+        ensureAudio();
+
+        // Check if running inside native Android Capacitor with AdMob plugin
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
+          try {
+            const AdMob = window.Capacitor.Plugins.AdMob;
+            await AdMob.prepareRewardVideoAd({
+              adId: ADMOB_CONFIG.androidRewardedAdUnitId,
+              isTesting: ADMOB_CONFIG.isTesting
+            });
+            const rewardItem = await AdMob.showRewardVideoAd();
+            if (rewardItem) {
+              adsWatched++;
+              playSound('reward');
+              if (typeof onRewardGranted === 'function') onRewardGranted();
+              updateUI();
+              return;
+            }
+          } catch (nativeErr) {
+            // Fall through to web simulation if offline or test fallback
+          }
+        }
+
+        // Web / Canvas 5-second interactive simulation
+        pendingAdCallback = onRewardGranted;
+        adRewardLabel.textContent = `Ödül: ${rewardTitle}`;
+        adModalCount.textContent = String(adsWatched + 1);
+        adModal.classList.remove('hidden');
+
+        let remaining = 5;
+        adTimerBadge.textContent = `${remaining} sn kaldı`;
+        adProgressBar.style.width = '5%';
+        btnClaimAdReward.disabled = true;
+        btnClaimAdReward.classList.add('opacity-40', 'cursor-not-allowed');
+
+        if (adCountdownTimer) clearInterval(adCountdownTimer);
+        adCountdownTimer = setInterval(() => {
+          remaining--;
+          const pct = Math.min(100, Math.round(((5 - remaining) / 5) * 100));
+          adProgressBar.style.width = `${pct}%`;
+
+          if (remaining > 0) {
+            adTimerBadge.textContent = `${remaining} sn kaldı`;
+          } else {
+            clearInterval(adCountdownTimer);
+            adTimerBadge.textContent = '✅ Ödül Hazır!';
+            btnClaimAdReward.disabled = false;
+            btnClaimAdReward.classList.remove('opacity-40', 'cursor-not-allowed');
+            playSound('reward');
+          }
+        }, 1000);
+      }
+
+      btnCancelAdEarly.addEventListener('click', () => {
+        if (adCountdownTimer) clearInterval(adCountdownTimer);
+        pendingAdCallback = null;
+        adModal.classList.add('hidden');
+        showToast('Video tamamlanmadığı için ödül iptal edildi.');
+      });
+
+      btnClaimAdReward.addEventListener('click', () => {
+        if (btnClaimAdReward.disabled) return;
+        adsWatched++;
+        adModal.classList.add('hidden');
+        if (typeof pendingAdCallback === 'function') {
+          pendingAdCallback();
+          pendingAdCallback = null;
+        }
+        updateUI();
+      });
+
+      // --- INPUT HANDLERS ---
+      function getCanvasCellFromEvent(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const relX = clientX - rect.left;
+        const relY = clientY - rect.top;
+        const col = Math.max(0, Math.min(COLS - 1, Math.floor((relX / rect.width) * COLS)));
+        const row = Math.max(0, Math.min(ROWS - 1, Math.floor((relY / rect.height) * ROWS)));
+        return { row, col };
+      }
+
+      canvas.addEventListener('mousemove', (e) => {
+        const { col } = getCanvasCellFromEvent(e.clientX, e.clientY);
+        hoverCol = col;
+      });
+
+      canvas.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        ensureAudio();
+        const { row, col } = getCanvasCellFromEvent(e.clientX, e.clientY);
+        hoverCol = col;
+        if (activeTool) {
+          handleToolClick(row, col);
+        } else {
+          dropInColumn(col);
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (isGameOver || !adModal.classList.contains('hidden')) return;
+        if (e.key >= '1' && e.key <= '5') {
+          const c = parseInt(e.key, 10) - 1;
+          hoverCol = c;
+          dropInColumn(c);
+        } else if (e.key === 'ArrowLeft') {
+          hoverCol = Math.max(0, hoverCol - 1);
+        } else if (e.key === 'ArrowRight') {
+          hoverCol = Math.min(COLS - 1, hoverCol + 1);
+        } else if (e.key === ' ' || e.key === 'Enter') {
+          dropInColumn(hoverCol);
+        }
+      });
+
+      // --- BUTTON LISTENERS ---
+      document.getElementById('btnMute').addEventListener('click', (e) => {
+        isMuted = !isMuted;
+        e.currentTarget.textContent = isMuted ? '🔇' : '🔊';
+      });
+
+      document.getElementById('btnQuests').addEventListener('click', () => {
+        updateQuestsUI();
+        questsModal.classList.remove('hidden');
+      });
+
+      document.getElementById('btnCloseQuests').addEventListener('click', () => {
+        questsModal.classList.add('hidden');
+      });
+
+      btnClaimDaily.addEventListener('click', () => {
+        if (dailyClaimed) return;
+        questsModal.classList.add('hidden');
+        triggerRewardedAd('Günlük 2.5X Giriş Hediyesi (+250 Altın)', () => {
+          dailyClaimed = true;
+          coins += 250;
+          saveState();
+          updateUI();
+          showToast('🎁 Günlük Bonus: +250 Altın Eklendi!');
+        });
+      });
+
+      btnClaimQuest256.addEventListener('click', () => {
+        if (quest256Claimed || maxTileReached < 256) {
+          showToast('Önce oyun tahtasında 256 bloğuna ulaşmalısın!');
+          return;
+        }
+        quest256Claimed = true;
+        coins += 150;
+        saveState();
+        playSound('reward');
+        updateUI();
+        showToast('🎉 Görev Tamamlandı: +150 Altın!');
+      });
+
+      btnClaimQuestScore.addEventListener('click', () => {
+        if (questScoreClaimed || score < 2000) {
+          showToast('Önce 2.000 skora ulaşmalısın!');
+          return;
+        }
+        questScoreClaimed = true;
+        coins += 200;
+        saveState();
+        playSound('reward');
+        updateUI();
+        showToast('🎉 Görev Tamamlandı: +200 Altın!');
+      });
+
+      document.getElementById('btnShare').addEventListener('click', () => {
+        const shareText = `🔥 Neon Merge 2048'de rekorum ${highScore.toLocaleString('tr-TR')}! Beni geçebilir misin? #NeonMerge2048`;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareText);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = shareText;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+        } catch (e) {}
+        showToast('📤 Meydan okuma mesajın kopyalandı! Arkadaşlarına gönder!');
+      });
+
+      btnWatch2xAd.addEventListener('click', () => {
+        triggerRewardedAd('60 Saniye 2X Skor & Altın Çarpanı', () => {
+          multiplier2xRemaining += 60;
+          if (!multiplierInterval) {
+            multiplierInterval = setInterval(() => {
+              if (multiplier2xRemaining > 0) {
+                multiplier2xRemaining--;
+                updateUI();
+              } else {
+                clearInterval(multiplierInterval);
+                multiplierInterval = null;
+                updateUI();
+              }
+            }, 1000);
+          }
+          updateUI();
+          showToast('🔥 2X Skor ve Altın Çarpanı Aktif!');
+        });
+      });
+
+      document.getElementById('btnHammer').addEventListener('click', () => {
+        if (isGameOver || isAnimating) return;
+        if (hammerCount > 0) {
+          activeTool = 'hammer';
+          toolModeText.textContent = '🔨 Kırmak istediğin bloğa dokun!';
+          toolModeBanner.classList.remove('hidden');
+        } else if (coins >= 80) {
+          coins -= 80;
+          hammerCount++;
+          saveState();
+          updateUI();
+          activeTool = 'hammer';
+          toolModeText.textContent = '🔨 Kırmak istediğin bloğa dokun!';
+          toolModeBanner.classList.remove('hidden');
+        } else {
+          triggerRewardedAd('+1 Çekiç Güçlendirici', () => {
+            hammerCount++;
+            updateUI();
+            showToast('🔨 +1 Çekiç Kazanıldı!');
+          });
+        }
+      });
+
+      document.getElementById('btnBomb').addEventListener('click', () => {
+        if (isGameOver || isAnimating) return;
+        if (bombCount > 0) {
+          activeTool = 'bomb';
+          toolModeText.textContent = '💣 3x3 patlatmak istediğin merkeze dokun!';
+          toolModeBanner.classList.remove('hidden');
+        } else if (coins >= 100) {
+          coins -= 100;
+          bombCount++;
+          saveState();
+          updateUI();
+          activeTool = 'bomb';
+          toolModeText.textContent = '💣 3x3 patlatmak istediğin merkeze dokun!';
+          toolModeBanner.classList.remove('hidden');
+        } else {
+          triggerRewardedAd('+1 Bomba (3x3) Güçlendirici', () => {
+            bombCount++;
+            updateUI();
+            showToast('💣 +1 Bomba Kazanıldı!');
+          });
+        }
+      });
+
+      btnCancelTool.addEventListener('click', () => {
+        activeTool = null;
+        toolModeBanner.classList.add('hidden');
+      });
+
+      document.getElementById('btnUpgradeNext').addEventListener('click', () => {
+        if (isGameOver || isAnimating) return;
+        triggerRewardedAd('Sıradaki Bloğu 2 Katına Çıkar', () => {
+          nextValue = Math.min(512, nextValue * 2);
+          updateUI();
+          showToast(`⚡ Sıradaki blok ${nextValue} oldu!`);
+        });
+      });
+
+      document.getElementById('btnFreeCoinsAd').addEventListener('click', () => {
+        triggerRewardedAd('+120 Altın Paketi', () => {
+          coins += 120;
+          saveState();
+          updateUI();
+          showToast('🪙 +120 Altın Hesabına Eklendi!');
+        });
+      });
+
+      btnReviveAd.addEventListener('click', () => {
+        triggerRewardedAd('Üst 3 Satırı Temizle ve Devam Et', () => {
+          for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < COLS; c++) {
+              if (grid[r][c] > 0) {
+                spawnParticles(r, c, '#38bdf8');
+                grid[r][c] = 0;
+              }
+            }
+          }
+          applyGravity();
+          revivedThisGame = true;
+          isGameOver = false;
+          gameOverModal.classList.add('hidden');
+          playSound('boom');
+          showToast('🚀 Üst 3 satır temizlendi! Oyuna devam et!');
+        });
+      });
+
+      btnRestartGame.addEventListener('click', () => {
+        initGame();
+      });
+
+      document.getElementById('btnMonetizeInfo').addEventListener('click', () => {
+        monetizeModal.classList.remove('hidden');
+      });
+
+      document.getElementById('btnCloseMonetize').addEventListener('click', () => {
+        monetizeModal.classList.add('hidden');
+      });
+
+      document.getElementById('btnResetStats').addEventListener('click', () => {
+        monetizeModal.classList.add('hidden');
+      });
+
+      const calcDownloadSlider = document.getElementById('calcDownloadSlider');
+      const calcDownloadVal = document.getElementById('calcDownloadVal');
+      const calcDailyViews = document.getElementById('calcDailyViews');
+      const calcMonthlyRev = document.getElementById('calcMonthlyRev');
+      if (calcDownloadSlider) {
+        calcDownloadSlider.addEventListener('input', (e) => {
+          const dl = parseInt(e.target.value, 10) || 1000;
+          calcDownloadVal.textContent = dl.toLocaleString('tr-TR');
+          const dailyActive = Math.round(dl * 0.15);
+          const dailyViews = dailyActive * 3;
+          const monthlyUsd = Math.round((dailyViews * 30 / 1000) * 10);
+          const monthlyTry = Math.round(monthlyUsd * 34.2);
+          calcDailyViews.textContent = `~${dailyViews.toLocaleString('tr-TR')} izleme/gün`;
+          calcMonthlyRev.textContent = `$${monthlyUsd.toLocaleString('tr-TR')} (~${monthlyTry.toLocaleString('tr-TR')} ₺)`;
+        });
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+
+      window.onload = function () {
+        initNativeAdMobIfAvailable();
+        loadSavedState();
+        resizeCanvas();
+        initGame();
+        requestAnimationFrame(render);
+      };
+    })();
+  </script>
+</body>
+</html>
